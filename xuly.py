@@ -8,7 +8,7 @@ mapping = {
     3: 0,   # Using_phone
     2: 2    # sleep
 }
-#dádasd
+
 def process_dataset(base_path):
     for split in ["train", "valid", "test"]:
         label_dir = os.path.join(base_path, split, "labels")
