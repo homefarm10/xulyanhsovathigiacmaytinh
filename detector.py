@@ -2,7 +2,7 @@ import cv2
 from ultralytics import YOLO
 
 class Detector:
-    def __init__(self, model_path="best.pt"):
+    def __init__(self, model_path="D:\\Duong\\XLASvaTGMT\\code\\best.pt"):
         self.model = YOLO(model_path)
 
     def detect_image(self, path):

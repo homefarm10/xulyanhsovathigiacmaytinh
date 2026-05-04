@@ -1,40 +1,66 @@
+import threading
 import tkinter as tk
 from tkinter import filedialog
+
 import cv2
 from PIL import Image, ImageTk
+
 from detector import Detector
-import threading  
+
+
 detector = Detector()
-
 running = False
-# ================= HIỂN THỊ =================
+DISPLAY_WIDTH = 900
+DISPLAY_HEIGHT = 560
 
+
+# ================= HIEN THI =================
 def show_menu():
+    panel.config(image="", text="")
+    panel.imgtk = None
+    panel_frame.pack_forget()
+    btn_stop.pack_forget()
+    menu_frame.pack(expand=True)
     btn_img.pack(pady=5)
     btn_video.pack(pady=5)
     btn_webcam.pack(pady=5)
-    btn_stop.pack_forget()
+    btn_exit.pack(pady=10)
+
 
 def show_stop():
+    menu_frame.pack_forget()
     btn_img.pack_forget()
     btn_video.pack_forget()
     btn_webcam.pack_forget()
+    btn_exit.pack_forget()
+    panel_frame.pack(pady=15)
+    panel.config(image="", text="Dang xu ly...")
     btn_stop.pack(pady=10)
+
 
 def stop():
     global running
     running = False
     show_menu()
 
+
+def finish_job():
+    global running
+    running = False
+    root.after(0, show_menu)
+
+
 def show_frame(frame):
+    if not running:
+        return
+
     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     img = Image.fromarray(frame)
-    img = img.resize((500, 400))
+    img.thumbnail((DISPLAY_WIDTH, DISPLAY_HEIGHT), Image.Resampling.LANCZOS)
 
     imgtk = ImageTk.PhotoImage(image=img)
-
-    panel.imgtk = imgtk          # ⚠️ giữ reference (QUAN TRỌNG)
-    panel.config(image=imgtk)   
+    panel.imgtk = imgtk
+    panel.config(image=imgtk, text="")
 
 
 # ================= IMAGE =================
@@ -43,17 +69,19 @@ def choose_image():
     show_stop()
     running = True
 
-    path = filedialog.askopenfilename()
+    path = filedialog.askopenfilename(
+        filetypes=[
+            ("Image files", "*.jpg *.jpeg *.png *.bmp"),
+            ("All files", "*.*"),
+        ]
+    )
     if not path:
         stop()
         return
 
     result = detector.detect_image(path)
-    if result is not None:
+    if running and result is not None:
         show_frame(result)
-
-    stop()
-
 
 
 # ================= VIDEO =================
@@ -62,17 +90,21 @@ def choose_video():
     show_stop()
     running = True
 
-    path = filedialog.askopenfilename()
+    path = filedialog.askopenfilename(
+        filetypes=[
+            ("Video files", "*.mp4 *.avi *.mov *.mkv"),
+            ("All files", "*.*"),
+        ]
+    )
     if not path:
         stop()
         return
 
     def run():
-        detector.detect_video(path, update_frame)
-        stop()
+        detector.detect_video(path, update_frame, lambda: running)
+        finish_job()
 
     threading.Thread(target=run, daemon=True).start()
-
 
 
 # ================= WEBCAM =================
@@ -83,44 +115,53 @@ def open_webcam():
 
     def run():
         detector.detect_webcam(update_frame, lambda: running)
-        stop()
+        finish_job()
 
     threading.Thread(target=run, daemon=True).start()
 
 
-
-# callback update frame
 def update_frame(frame):
-    if not running:
-        return
+    if running:
+        root.after(0, show_frame, frame)
 
-    show_frame(frame)
-    root.update()
+
+def close_app():
+    global running
+    running = False
+    root.destroy()
 
 
 # ================= UI =================
-
 root = tk.Tk()
 root.title("YOLO Detection System")
-root.geometry("600x550")
+root.geometry("1000x720")
+root.resizable(False, False)
+
+menu_frame = tk.Frame(root)
+
+panel_frame = tk.Frame(
+    root,
+    width=DISPLAY_WIDTH,
+    height=DISPLAY_HEIGHT,
+    bg="#f2f2f2",
+    relief="sunken",
+    bd=1,
+)
+panel_frame.pack_propagate(False)
+
+panel = tk.Label(panel_frame, text="", bg="#f2f2f2")
+panel.pack(expand=True)
+
 btn_stop = tk.Button(root, text="STOP", command=stop, width=20, bg="red", fg="white")
-btn_stop.pack_forget()
-title = tk.Label(root, text="YOLO Detection", font=("Arial", 20))
-title.pack(pady=10)
 
-panel = tk.Label(root)
-panel.pack()
+btn_img = tk.Button(menu_frame, text="Chon anh", command=choose_image, width=20)
 
-btn_img = tk.Button(root, text="Chọn ảnh", command=choose_image, width=20)
-btn_img.pack(pady=5)
+btn_video = tk.Button(menu_frame, text="Chon video", command=choose_video, width=20)
 
-btn_video = tk.Button(root, text="Chọn video", command=choose_video, width=20)
-btn_video.pack(pady=5)
+btn_webcam = tk.Button(menu_frame, text="Mo webcam", command=open_webcam, width=20)
 
-btn_webcam = tk.Button(root, text="Mở webcam", command=open_webcam, width=20)
-btn_webcam.pack(pady=5)
+btn_exit = tk.Button(menu_frame, text="Thoat", command=close_app, width=20)
 
-btn_exit = tk.Button(root, text="Thoát", command=root.quit, width=20)
-btn_exit.pack(pady=10)
-
+root.protocol("WM_DELETE_WINDOW", close_app)
+show_menu()
 root.mainloop()
