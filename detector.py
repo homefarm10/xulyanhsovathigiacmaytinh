@@ -2,7 +2,7 @@ import cv2
 from ultralytics import YOLO
 
 class Detector:
-    def __init__(self, model_path="D:\\Duong\\XLASvaTGMT\\code\\best.pt"):
+    def __init__(self, model_path="best3.pt"):
         self.model = YOLO(model_path)
 
     def detect_image(self, path):
@@ -13,10 +13,10 @@ class Detector:
         results = self.model(img)
         return results[0].plot()
 
-    def detect_video(self, path, callback):
+    def detect_video(self, path, callback, is_running):
         cap = cv2.VideoCapture(path)
 
-        while True:
+        while is_running():
             ret, frame = cap.read()
             if not ret:
                 break
