@@ -162,11 +162,11 @@ def stop():
 def finish_job():
     global running
     running = False
-    root.after(0, show_menu)
+    root.after(0, show_menu) # dừng và trở lại menu
 
 
-def show_frame(frame):
-    if not running:
+def show_frame(frame): # hiển thị kết quả ảnh
+    if not running: # nếu jhoong chạy thì dùng lại
         return
 
     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -182,30 +182,32 @@ def show_frame(frame):
 # ================= IMAGE =================
 def choose_image():
     global running
-    show_stop()
-    running = True
-    status_var.set("Dang cho chon anh...")
+    show_stop() # hàm thực hiện ẩn các thanh menu, hiển thị vùng ảnh, và hiển thị nút stop
+    running = True #Chương trình đang detect
+    status_var.set("Dang cho chon anh...") #Đổi trạng thái
 
-    path = filedialog.askopenfilename(
+    path = filedialog.askopenfilename( #Mở cửa sổ chọn file
         filetypes=[
             ("Image files", "*.jpg *.jpeg *.png *.bmp"),
             ("All files", "*.*"),
         ]
     )
-    if not path:
-        stop()
+    if not path: #Nếu user bấm Cancel
+        stop() # dùng xử lý quay về menu
         return
 
     status_var.set("Dang xu ly anh...")
 
     def run():
         result = detector.detect_image(path)
-        if running and result is not None:
-            root.after(0, show_frame, result)
+        if running and result is not None: # nếu chương trình còn chạy và kq not None thì Gọi show_frame(result) trên main GUI thread
+            root.after(0, show_frame, result) #Yêu cầu Tkinter gọi hàm show_frame(result) sau 0 ms. Cập nhật GUI về main thread (detect() chạy ở thread phụ, Nó KHÔNG trực tiếp sửa GUI Nó nhờ root.after() gửi yêu cầu cho main thread.)
 
-    threading.Thread(target=run, daemon=True).start()
-
-
+    threading.Thread(target=run, daemon=True).start() #Chạy song song không làm đơ giao diện, tạo và khởi chạy một luồng (thread) chạy ngầm mới để thực thi hàm run. 
+    # tại vì như trong detect video hay webcam có vòng lặp while nó sẽ chạy luôn luôn mà Tkinter cần 1 luồng chính rảnh để: vẽ giao diện, nhận click chuột, nhận bàn phím, update ảnh
+    # nên cần chạy song song với phần detect bên kia có sử dungh vòng while nếu không chạy song song thì while detect chiếm luôn thread chính nên GUI không update được.
+    # luồng giao diện riêng, luồng detect riêng
+    # tạo luồng riêng chỉ để chạy cái run()-detect
 # ================= VIDEO =================
 def choose_video():
     global running
@@ -213,23 +215,26 @@ def choose_video():
     running = True
     status_var.set("Dang cho chon video...")
 
-    path = filedialog.askopenfilename(
+    path = filedialog.askopenfilename( # chon file
         filetypes=[
             ("Video files", "*.mp4 *.avi *.mov *.mkv"),
             ("All files", "*.*"),
         ]
     )
     if not path:
-        stop()
+        stop() # dừng và quay lại menu
         return
     status_var.set("Dang xu ly video...")
 
-    def run():
-        detector.detect_video(path, update_frame, lambda: running)
+    def run(): # detect_video
+        detector.detect_video(path, update_frame, lambda: running) 
         finish_job()
 
     threading.Thread(target=run, daemon=True).start()
-
+    # tại vì như trong detect video hay webcam có vòng lặp while nó sẽ chạy luôn luôn mà Tkinter cần 1 luồng chính rảnh để: vẽ giao diện, nhận click chuột, nhận bàn phím, update ảnh
+    # nên cần chạy song song với phần detect bên kia có sử dungh vòng while nếu không chạy song song thì while detect chiếm luôn thread chính nên GUI không update được.
+    # luồng giao diện riêng, luồng detect riêng
+    # tạo luồng riêng chỉ để chạy cái run()-detect
 
 # ================= WEBCAM =================
 def open_webcam():
@@ -243,9 +248,12 @@ def open_webcam():
         finish_job()
 
     threading.Thread(target=run, daemon=True).start()
+    # tại vì như trong detect video hay webcam có vòng lặp while nó sẽ chạy luôn luôn mà Tkinter cần 1 luồng chính rảnh để: vẽ giao diện, nhận click chuột, nhận bàn phím, update ảnh
+    # nên cần chạy song song với phần detect bên kia có sử dungh vòng while nếu không chạy song song thì while detect chiếm luôn thread chính nên GUI không update được.
+    # luồng giao diện riêng, luồng detect riêng
+    # tạo luồng riêng chỉ để chạy cái run()-detect
 
-
-def update_frame(frame):
+def update_frame(frame): # callback hay là update_frame gọi liên tục và hiển thị ảnh thông qua show_frame(frame)
     if running:
         root.after(0, show_frame, frame)
 
@@ -381,7 +389,7 @@ menu_title.pack(anchor="w")
 
 menu_hint = tk.Label(
     menu_card,
-    text="Tai anh, mo video co san, hoac dung webcam de bat dau nhan dien.",
+    text="Tai anh, video, hoac dung webcam de nhan dien.",
     bg=SURFACE_COLOR,
     fg=MUTED_COLOR,
     font=("Segoe UI", 10),
@@ -426,7 +434,7 @@ btn_stop.pack(side="right")
 btn_img = RoundedButton(
     button_grid,
     text="Chon anh",
-    command=choose_image,
+    command=choose_image, # thực hiện mở file chọn ảnh
     bg_color=PRIMARY_COLOR,
     hover_color="#1d4ed8",
 )
