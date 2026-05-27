@@ -89,3 +89,109 @@ def count_dataset(base_path):
         for i in range(len(names)):
             print(f"{names[i]}: {class_counter[i]} objects")
 count_dataset("Action Behaviour Student")
+
+
+import os
+import random
+
+def delete(base_path, ratio=0.5):
+
+    # ======================================
+    # lấy file chứa class 0
+    # ======================================
+    class0_files = []
+
+    for split in ["train", "valid", "test"]:
+
+        label_dir = os.path.join(base_path, split, "labels")
+
+        for file in os.listdir(label_dir):
+
+            label_path = os.path.join(label_dir, file)
+
+            with open(label_path, 'r') as f:
+                lines = f.readlines()
+
+            for line in lines:
+
+                class_id = int(line.strip().split()[0])
+
+                if class_id == 0:
+                    class0_files.append((split, file))
+                    break
+
+    # ======================================
+    # random chọn file để xóa class 0
+    # ======================================
+    num_delete = int(len(class0_files) * ratio)
+
+    remove_files = random.sample(class0_files, num_delete)
+
+    remove_set = set(remove_files)
+
+    print(f"Total class 0 files: {len(class0_files)}")
+    print(f"Remove: {num_delete}")
+
+    # ======================================
+    # xử lý dataset
+    # ======================================
+    for split in ["train", "valid", "test"]:
+
+        label_dir = os.path.join(base_path, split, "labels")
+        image_dir = os.path.join(base_path, split, "images")
+
+        for file in os.listdir(label_dir):
+
+            label_path = os.path.join(label_dir, file)
+
+            with open(label_path, 'r') as f:
+                lines = f.readlines()
+
+            new_lines = []
+
+            for line in lines:
+
+                parts = line.strip().split()
+
+                class_id = int(parts[0])
+
+                # nếu file được chọn và object là class 0
+                if ((split, file) in remove_set) and (class_id == 0):
+                    continue
+
+                new_lines.append(" ".join(parts))
+
+            # ======================================
+            # tìm ảnh tương ứng
+            # ======================================
+            image_name = os.path.splitext(file)[0]
+
+            image_path = None
+
+            for ext in [".jpg", ".png", ".jpeg"]:
+
+                temp_path = os.path.join(image_dir, image_name + ext)
+
+                if os.path.exists(temp_path):
+                    image_path = temp_path
+                    break
+
+            # ======================================
+            # nếu không còn object -> xóa file
+            # ======================================
+            if len(new_lines) == 0:
+
+                os.remove(label_path)
+
+                if image_path:
+                    os.remove(image_path)
+
+                print(f"Deleted: {file}")
+
+            else:
+                with open(label_path, 'w') as f:
+                    f.write("\n".join(new_lines))
+
+    print("Done!")
+
+# delete("student_classroom_behavior", ratio=0.5)
