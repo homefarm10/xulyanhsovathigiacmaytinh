@@ -2,9 +2,9 @@ import os
 
 # mapping id cũ -> id mới
 mapping = {
-    # 0: 0,   # Using_phone
-    # 4: 1,   # hand-raising
-    # 8: 2    # sleep
+    # 8: 0,   # Using_phone
+    # 2: 1,   # hand-raising
+    # 3: 2    # sleep
     3: 0,   # Using_phone
     2: 2    # sleep
 }
@@ -56,7 +56,7 @@ def process_dataset(base_path):
 
 
 # chạy
-process_dataset(r"Action Behaviour Student")
+# process_dataset(r"Action Behaviour Student")
 
 # dem so luong
 # import os
@@ -65,7 +65,7 @@ from collections import Counter
 # tên class của bạn (sau khi đã lọc còn 3 class)
 names = ['Using_phone', 'hand-raising', 'sleep']
 
-def count_dataset(base_path):
+def count_dataset(base_path): # đếm sô lượng file ảnh và số lượng nhãn
     for split in ["train", "valid", "test"]:
         label_dir = os.path.join(base_path, split, "labels")
         image_dir = os.path.join(base_path, split, "images")
@@ -88,13 +88,13 @@ def count_dataset(base_path):
 
         for i in range(len(names)):
             print(f"{names[i]}: {class_counter[i]} objects")
-count_dataset("Action Behaviour Student")
+count_dataset(r"D:\Duong\XLASvaTGMT\code\xulyanhso\Student Behaviour Detection")
 
 
 import os
 import random
 
-def delete(base_path, ratio=0.5):
+def delete(base_path, ratio=0.5): # cân bằng dữ liệu
 
     # ======================================
     # lấy file chứa class 0
